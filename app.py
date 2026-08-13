@@ -8,11 +8,6 @@ from docx import Document
 from docx.shared import Inches
 from docxtpl import DocxTemplate, InlineImage
 import io
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
 # ------------------------------------------------
 # إعدادات واجهة الصفحة (العنوان والأيقونة والهوية)
@@ -54,57 +49,6 @@ page_bg_img = """
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
-
-# ------------------------------------------------
-# دالة تصوير الخريطة بدقة عالية (مع نصف قطر 500 متر وضمان الحفظ)
-# ------------------------------------------------
-def capture_map_screenshot(lat, lon, output_path):
-    m = folium.Map(
-        location=[lat, lon], 
-        zoom_start=15,
-        tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        attr="Google Satellite Hybrid"
-    )
-    folium.Marker([lat, lon], tooltip="موقع المنشأة", icon=folium.Icon(color="blue", icon="info-sign")).add_to(m)
-    # رسم دائرة نصف قطرها 500 متر بدقة
-    folium.Circle(
-        location=[lat, lon], 
-        radius=500, 
-        color="#ff4d4d", 
-        weight=2,
-        fill=True, 
-        fill_color="#ff4d4d", 
-        fill_opacity=0.25
-    ).add_to(m)
-    
-    html_path = output_path.replace(".png", ".html")
-    m.save(html_path)
-    
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--window-size=1000,800')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
-    driver.get("file://" + os.path.abspath(html_path))
-    
-    # الانتظار حتى تحميل صور الأقمار الصناعية بالكامل
-    time.sleep(6)
-    driver.save_screenshot(output_path)
-    driver.quit()
-    
-    try:
-        os.remove(html_path)
-    except:
-        pass
-        
-    # التأكد التام من أن ملف الصورة تم إنشاؤه واستقر على القرص
-    for _ in range(10):
-        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-            break
-        time.sleep(0.5)
 
 # ------------------------------------------------
 # دالة تحويل المرفقات إلى صور بدقة عالية
@@ -222,13 +166,11 @@ if lat != 0.0 and lon != 0.0:
         fill_opacity=0.25
     ).add_to(m_display)
     st_folium(m_display, width=725, height=450)
-    
-    st.success("✨ سيتم تصوير هذه الخريطة مع نطاق 500 متر بدقة وإدراجها في التقرير تلقائياً!")
 else:
-    st.info("قم بإدخال خط العرض وخط الطول في الأعلى لكي تظهر الخريطة هنا تلقائياً.")
+    st.info("قم بإدخال خط العرض وخط الطول في الأعلى لتظهر الخريطة هنا.")
 
 # ------------------------------------------------
-# 4. قسم المرفقات والمستندات الرسمية وصور الزيارة
+# 4. قسم المرفقات والمستندات الرسمية وصور الخريطة والزيارة
 # ------------------------------------------------
 st.markdown("---")
 st.subheader("📎 مرفقات المشروع والمستندات الرسمية")
@@ -236,6 +178,10 @@ st.subheader("📎 مرفقات المشروع والمستندات الرسمي
 cr_file = st.file_uploader("📄 السجل التجاري (PDF أو صورة)", type=["pdf", "png", "jpg", "jpeg"], key="cr")
 vat_file = st.file_uploader("📄 شهادة ضريبة القيمة المضافة (PDF أو صورة)", type=["pdf", "png", "jpg", "jpeg"], key="vat")
 address_file = st.file_uploader("📄 العنوان الوطني (PDF أو صورة)", type=["pdf", "png", "jpg", "jpeg"], key="addr")
+
+st.markdown("---")
+st.subheader("🗺️ صورة خريطة الموقع (نطاق 500 متر)")
+map_file = st.file_uploader("ارفع صورة لقطة شاشة الخريطة:", type=["png", "jpg", "jpeg"], key="map_file")
 
 st.markdown("---")
 st.subheader("📸 صور الزيارة الميدانية")
@@ -256,21 +202,14 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
         project_folder = os.path.join("Projects", company_name)
         os.makedirs(project_folder, exist_ok=True)
         
-        with st.spinner('⏳ جاري أتمتة الخريطة بنطاق 500م وتجهيز المستندات وصور الزيارة المتعددة... الرجاء الانتظار قليلاً'):
+        with st.spinner('⏳ جاري تجهيز المستندات وصور الخريطة والزيارة وإدراجها في مواقعها...'):
             doc_template = DocxTemplate("template.docx")
-            
-            # تصوير الخريطة في الخلفية بدقة ونصف قطر 500 متر مع ضمان الحفظ
-            map_path = os.path.join(project_folder, "Map_Screenshot.png")
-            if lat != 0.0 and lon != 0.0:
-                try:
-                    capture_map_screenshot(lat, lon, map_path)
-                except Exception as e:
-                    st.warning(f"حدث خطأ أثناء تصوير الخريطة: {e}")
             
             # معالجة وحفظ المستندات الأساسية كصور
             cr_img = convert_to_image(cr_file, project_folder, "cr") if cr_file else None
             vat_img = convert_to_image(vat_file, project_folder, "vat") if vat_file else None
             addr_img = convert_to_image(address_file, project_folder, "addr") if address_file else None
+            map_img = convert_to_image(map_file, project_folder, "map_shot") if map_file else None
             
             # معالجة صور الزيارة الميدانية المتعددة
             visit_image_objects = []
@@ -282,11 +221,6 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
                     visit_image_objects.append(photo_path)
             
             visit_images_inline = [InlineImage(doc_template, img, width=Inches(5.0)) for img in visit_image_objects]
-            
-            # ضبط كائن خريطة الموقع للربط السليم مع القالب
-            map_inline_image = None
-            if os.path.exists(map_path) and os.path.getsize(map_path) > 0:
-                map_inline_image = InlineImage(doc_template, map_path, width=Inches(5.5))
             
             # ربط المتغيرات بالرموز البرمجية في قالب الـ Word
             context = {
@@ -309,7 +243,7 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
                 'cr_image': InlineImage(doc_template, cr_img, width=Inches(5.0)) if cr_img else "[لم يتم إرفاق السجل التجاري]",
                 'vat_image': InlineImage(doc_template, vat_img, width=Inches(5.0)) if vat_img else "[لم يتم إرفاق شهادة الضريبة]",
                 'address_image': InlineImage(doc_template, addr_img, width=Inches(5.0)) if addr_img else "[لم يتم إرفاق العنوان الوطني]",
-                'map_image': map_inline_image if map_inline_image else "[لم يتم تصوير خريطة الموقع]",
+                'map_image': InlineImage(doc_template, map_img, width=Inches(5.5)) if map_img else "[لم يتم إرفاق خريطة الموقع]",
                 'visit_images': visit_images_inline
             }
             
@@ -318,7 +252,7 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
             doc_template.save(final_io)
             final_io.seek(0)
             
-        st.success("🎉 تم التقاط الخريطة بنطاق 500م وتعبئة التقرير وإدراج كافة الصور في مواقعها بنجاح تام!")
+        st.success("🎉 تم تعبئة التقرير وإدراج خريطة الموقع وكافة الصور في مواقعها بنجاح تام!")
         st.download_button(
             label="📥 تحميل التقرير المعبأ الآن (Word)",
             data=final_io,
