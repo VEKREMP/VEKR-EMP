@@ -1,0 +1,10 @@
+streamlit
+streamlit-folium
+folium
+pandas
+openpyxl
+python-docx
+docxtpl
+PyMuPDF
+selenium
+webdriver-manager
