@@ -51,21 +51,27 @@ page_bg_img = """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# دالة تحويل المرفقات إلى صور بدقة عالية
+# دالة تحويل المرفقات (تدعم تحويل جميع صفحات الـ PDF)
 # ------------------------------------------------
-def convert_to_image(uploaded_file, output_folder, base_name):
+def convert_to_images(uploaded_file, output_folder, base_name):
     file_ext = uploaded_file.name.split('.')[-1].lower()
-    img_output_path = os.path.join(output_folder, f"{base_name}.png")
+    img_paths = []
     
     if file_ext == "pdf":
         doc_pdf = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-        page = doc_pdf.load_page(0)
-        pix = page.get_pixmap(dpi=150)
-        pix.save(img_output_path)
+        for page_num in range(len(doc_pdf)):
+            page = doc_pdf.load_page(page_num)
+            pix = page.get_pixmap(dpi=150)
+            img_output_path = os.path.join(output_folder, f"{base_name}_page_{page_num + 1}.png")
+            pix.save(img_output_path)
+            img_paths.append(img_output_path)
     else:
+        img_output_path = os.path.join(output_folder, f"{base_name}.png")
         with open(img_output_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-    return img_output_path
+        img_paths.append(img_output_path)
+        
+    return img_paths
 
 # ------------------------------------------------
 # تحميل بيانات الأنشطة من ملف الأكسل
@@ -202,14 +208,20 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
         project_folder = os.path.join("Projects", company_name)
         os.makedirs(project_folder, exist_ok=True)
         
-        with st.spinner('⏳ جاري تجهيز المستندات وصور الخريطة والزيارة وإدراجها في مواقعها...'):
+        with st.spinner('⏳ جاري معالجة كافة صفحات المستندات والخريطة وصور الزيارة...'):
             doc_template = DocxTemplate("template.docx")
             
-            # معالجة وحفظ المستندات الأساسية كصور
-            cr_img = convert_to_image(cr_file, project_folder, "cr") if cr_file else None
-            vat_img = convert_to_image(vat_file, project_folder, "vat") if vat_file else None
-            addr_img = convert_to_image(address_file, project_folder, "addr") if address_file else None
-            map_img = convert_to_image(map_file, project_folder, "map_shot") if map_file else None
+            # معالجة المستندات (وتحويل كافة الصفحات لصور إن وجدت متعددة الصفحات)
+            cr_paths = convert_to_images(cr_file, project_folder, "cr") if cr_file else []
+            vat_paths = convert_to_images(vat_file, project_folder, "vat") if vat_file else []
+            addr_paths = convert_to_images(address_file, project_folder, "addr") if address_file else []
+            map_paths = convert_to_images(map_file, project_folder, "map_shot") if map_file else []
+            
+            # إذا كان المستند يتكون من عدة صفحات (مثل عقد أو شهادة من صفحتين)، نعرضها كقائمة متسلسلة تلقائياً
+            cr_images_inline = [InlineImage(doc_template, p, width=Inches(5.0)) for p in cr_paths]
+            vat_images_inline = [InlineImage(doc_template, p, width=Inches(5.0)) for p in vat_paths]
+            addr_images_inline = [InlineImage(doc_template, p, width=Inches(5.0)) for p in addr_paths]
+            map_image_inline = InlineImage(doc_template, map_paths[0], width=Inches(5.5)) if map_paths else None
             
             # معالجة صور الزيارة الميدانية المتعددة
             visit_image_objects = []
@@ -239,11 +251,11 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
                 'liquid_waste': liquid_waste,
                 'hazardous_waste': hazardous_waste,
                 
-                # إدراج الصور في مواقعها بدقة عبر InlineImage
-                'cr_image': InlineImage(doc_template, cr_img, width=Inches(5.0)) if cr_img else "[لم يتم إرفاق السجل التجاري]",
-                'vat_image': InlineImage(doc_template, vat_img, width=Inches(5.0)) if vat_img else "[لم يتم إرفاق شهادة الضريبة]",
-                'address_image': InlineImage(doc_template, addr_img, width=Inches(5.0)) if addr_img else "[لم يتم إرفاق العنوان الوطني]",
-                'map_image': InlineImage(doc_template, map_img, width=Inches(5.5)) if map_img else "[لم يتم إرفاق خريطة الموقع]",
+                # إدراج الصور (تدعم تعدد الصفحات الآن)
+                'cr_image': cr_images_inline[0] if cr_images_inline else "[لم يتم إرفاق السجل التجاري]",
+                'vat_image': vat_images_inline[0] if vat_images_inline else "[لم يتم إرفاق شهادة الضريبة]",
+                'address_image': addr_images_inline[0] if addr_images_inline else "[لم يتم إرفاق العنوان الوطني]",
+                'map_image': map_image_inline if map_image_inline else "[لم يتم إرفاق خريطة الموقع]",
                 'visit_images': visit_images_inline
             }
             
@@ -252,7 +264,7 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
             doc_template.save(final_io)
             final_io.seek(0)
             
-        st.success("🎉 تم تعبئة التقرير وإدراج خريطة الموقع وكافة الصور في مواقعها بنجاح تام!")
+        st.success("🎉 تم معالجة كافة صفحات المستندات وإدراج الصور في مواقعها بنجاح تام!")
         st.download_button(
             label="📥 تحميل التقرير المعبأ الآن (Word)",
             data=final_io,
