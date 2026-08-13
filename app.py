@@ -56,7 +56,7 @@ page_bg_img = """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# دالة تصوير الخريطة تلقائياً (تعمل في الخلفية)
+# دالة تصوير الخريطة بدقة (مع نصف قطر 500 متر)
 # ------------------------------------------------
 def capture_map_screenshot(lat, lon, output_path):
     m = folium.Map(
@@ -66,14 +66,23 @@ def capture_map_screenshot(lat, lon, output_path):
         attr="Google Satellite Hybrid"
     )
     folium.Marker([lat, lon], tooltip="موقع المنشأة", icon=folium.Icon(color="blue", icon="info-sign")).add_to(m)
-    folium.Circle(location=[lat, lon], radius=500, color="red", fill=True, fill_color="red", fill_opacity=0.2).add_to(m)
+    # إضافة دائرة بنصف قطر 500 متر بدقة
+    folium.Circle(
+        location=[lat, lon], 
+        radius=500, 
+        color="#ff4d4d", 
+        weight=2,
+        fill=True, 
+        fill_color="#ff4d4d", 
+        fill_opacity=0.25
+    ).add_to(m)
     
     html_path = output_path.replace(".png", ".html")
     m.save(html_path)
     
     options = Options()
     options.add_argument('--headless')
-    options.add_argument('--window-size=800,600')
+    options.add_argument('--window-size=1000,800')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     
@@ -81,7 +90,8 @@ def capture_map_screenshot(lat, lon, output_path):
     driver = webdriver.Chrome(service=service, options=options)
     driver.get("file://" + os.path.abspath(html_path))
     
-    time.sleep(3)
+    # زيادة وقت الانتظار لضمان تحميل طبقات صور الأقمار الصناعية بالكامل
+    time.sleep(5)
     driver.save_screenshot(output_path)
     driver.quit()
     
@@ -155,6 +165,8 @@ search_query = st.selectbox(
     format_func=lambda x: f"{x} - {activities_names.get(x, '')}"
 )
 
+# جلب اسم النشاط الدقيق حسب آيزك ووصفه الفني
+selected_activity_name = activities_names.get(search_query, "")
 selected_description = activities_desc.get(search_query, "")
 activity_description = st.text_area("الوصف الفني للنشاط (مُولد تلقائياً - يمكنك تعديله):", value=selected_description, height=130)
 
@@ -195,10 +207,18 @@ if lat != 0.0 and lon != 0.0:
         attr="Google Satellite Hybrid"
     )
     folium.Marker([lat, lon], tooltip="موقع المنشأة", icon=folium.Icon(color="blue", icon="info-sign")).add_to(m_display)
-    folium.Circle(location=[lat, lon], radius=500, color="red", fill=True, fill_color="red", fill_opacity=0.2).add_to(m_display)
+    folium.Circle(
+        location=[lat, lon], 
+        radius=500, 
+        color="#ff4d4d", 
+        weight=2,
+        fill=True, 
+        fill_color="#ff4d4d", 
+        fill_opacity=0.25
+    ).add_to(m_display)
     st_folium(m_display, width=725, height=450)
     
-    st.success("✨ سيتم تصوير هذه الخريطة وإدراجها في التقرير تلقائياً عبر الذكاء البرمجي!")
+    st.success("✨ سيتم تصوير هذه الخريطة مع نطاق 500 متر بدقة وإدراجها في التقرير تلقائياً!")
 else:
     st.info("قم بإدخال خط العرض وخط الطول في الأعلى لكي تظهر الخريطة هنا تلقائياً.")
 
@@ -214,7 +234,7 @@ address_file = st.file_uploader("📄 العنوان الوطني (PDF أو صو
 
 st.markdown("---")
 st.subheader("📸 صور الزيارة الميدانية")
-visit_photos = st.file_uploader("ارفع صور الزيارة (لتوضع في الملاحق بدون أسماء):", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="visit")
+visit_photos = st.file_uploader("ارفع صور الزيارة المتعددة (لتوضع في الملاحق بدون أسماء):", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="visit")
 
 # ------------------------------------------------
 # 5. قسم إصدار التقرير النهائي (عبر القالب)
@@ -231,10 +251,10 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
         project_folder = os.path.join("Projects", company_name)
         os.makedirs(project_folder, exist_ok=True)
         
-        with st.spinner('⏳ جاري أتمتة الخريطة وتجهيز المستندات وصور الزيارة في مواقعها... الرجاء الانتظار قليلاً'):
+        with st.spinner('⏳ جاري أتمتة الخريطة بنطاق 500م وتجهيز المستندات وصور الزيارة المتعددة... الرجاء الانتظار قليلاً'):
             doc_template = DocxTemplate("template.docx")
             
-            # تصوير الخريطة في الخلفية
+            # تصوير الخريطة في الخلفية بدقة ونصف قطر 500 متر
             map_path = os.path.join(project_folder, "Map_Screenshot.png")
             if lat != 0.0 and lon != 0.0:
                 try:
@@ -247,7 +267,7 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
             vat_img = convert_to_image(vat_file, project_folder, "vat") if vat_file else None
             addr_img = convert_to_image(address_file, project_folder, "addr") if address_file else None
             
-            # معالجة صور الزيارة الميدانية
+            # معالجة صور الزيارة الميدانية المتعددة
             visit_image_objects = []
             if visit_photos:
                 for i, photo in enumerate(visit_photos):
@@ -268,7 +288,9 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
                 'project_area': project_area,
                 'lat': lat,
                 'lon': lon,
-                'activity_description': activity_description,
+                'activity_code': search_query,             # رمز النشاط
+                'activity_name': selected_activity_name,     # النشاط (حسب آيزك) من الأكسل
+                'activity_description': activity_description, # الوصف الفني للنشاط
                 'solid_waste': solid_waste,
                 'liquid_waste': liquid_waste,
                 'hazardous_waste': hazardous_waste,
@@ -286,7 +308,7 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
             doc_template.save(final_io)
             final_io.seek(0)
             
-        st.success("🎉 تم التقاط الخريطة وتعبئة التقرير وإدراج كافة الصور في مواقعها بنجاح تام!")
+        st.success("🎉 تم التقاط الخريطة بنطاق 500م وتعبئة التقرير وإدراج كافة الصور في مواقعها بنجاح تام!")
         st.download_button(
             label="📥 تحميل التقرير المعبأ الآن (Word)",
             data=final_io,
