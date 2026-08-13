@@ -56,7 +56,7 @@ page_bg_img = """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# دالة تصوير الخريطة بدقة (مع نصف قطر 500 متر)
+# دالة تصوير الخريطة بدقة عالية (مع نصف قطر 500 متر وضمان الحفظ)
 # ------------------------------------------------
 def capture_map_screenshot(lat, lon, output_path):
     m = folium.Map(
@@ -66,7 +66,7 @@ def capture_map_screenshot(lat, lon, output_path):
         attr="Google Satellite Hybrid"
     )
     folium.Marker([lat, lon], tooltip="موقع المنشأة", icon=folium.Icon(color="blue", icon="info-sign")).add_to(m)
-    # إضافة دائرة بنصف قطر 500 متر بدقة
+    # رسم دائرة نصف قطرها 500 متر بدقة
     folium.Circle(
         location=[lat, lon], 
         radius=500, 
@@ -90,8 +90,8 @@ def capture_map_screenshot(lat, lon, output_path):
     driver = webdriver.Chrome(service=service, options=options)
     driver.get("file://" + os.path.abspath(html_path))
     
-    # زيادة وقت الانتظار لضمان تحميل طبقات صور الأقمار الصناعية بالكامل
-    time.sleep(5)
+    # الانتظار حتى تحميل صور الأقمار الصناعية بالكامل
+    time.sleep(6)
     driver.save_screenshot(output_path)
     driver.quit()
     
@@ -99,6 +99,12 @@ def capture_map_screenshot(lat, lon, output_path):
         os.remove(html_path)
     except:
         pass
+        
+    # التأكد التام من أن ملف الصورة تم إنشاؤه واستقر على القرص
+    for _ in range(10):
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            break
+        time.sleep(0.5)
 
 # ------------------------------------------------
 # دالة تحويل المرفقات إلى صور بدقة عالية
@@ -165,7 +171,6 @@ search_query = st.selectbox(
     format_func=lambda x: f"{x} - {activities_names.get(x, '')}"
 )
 
-# جلب اسم النشاط الدقيق حسب آيزك ووصفه الفني
 selected_activity_name = activities_names.get(search_query, "")
 selected_description = activities_desc.get(search_query, "")
 activity_description = st.text_area("الوصف الفني للنشاط (مُولد تلقائياً - يمكنك تعديله):", value=selected_description, height=130)
@@ -254,7 +259,7 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
         with st.spinner('⏳ جاري أتمتة الخريطة بنطاق 500م وتجهيز المستندات وصور الزيارة المتعددة... الرجاء الانتظار قليلاً'):
             doc_template = DocxTemplate("template.docx")
             
-            # تصوير الخريطة في الخلفية بدقة ونصف قطر 500 متر
+            # تصوير الخريطة في الخلفية بدقة ونصف قطر 500 متر مع ضمان الحفظ
             map_path = os.path.join(project_folder, "Map_Screenshot.png")
             if lat != 0.0 and lon != 0.0:
                 try:
@@ -278,6 +283,11 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
             
             visit_images_inline = [InlineImage(doc_template, img, width=Inches(5.0)) for img in visit_image_objects]
             
+            # ضبط كائن خريطة الموقع للربط السليم مع القالب
+            map_inline_image = None
+            if os.path.exists(map_path) and os.path.getsize(map_path) > 0:
+                map_inline_image = InlineImage(doc_template, map_path, width=Inches(5.5))
+            
             # ربط المتغيرات بالرموز البرمجية في قالب الـ Word
             context = {
                 'company_name': company_name,
@@ -288,9 +298,9 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
                 'project_area': project_area,
                 'lat': lat,
                 'lon': lon,
-                'activity_code': search_query,             # رمز النشاط
-                'activity_name': selected_activity_name,     # النشاط (حسب آيزك) من الأكسل
-                'activity_description': activity_description, # الوصف الفني للنشاط
+                'activity_code': search_query,
+                'activity_name': selected_activity_name,
+                'activity_description': activity_description,
                 'solid_waste': solid_waste,
                 'liquid_waste': liquid_waste,
                 'hazardous_waste': hazardous_waste,
@@ -299,7 +309,7 @@ if st.button("إنشاء مسودة التقرير (Word) 📝"):
                 'cr_image': InlineImage(doc_template, cr_img, width=Inches(5.0)) if cr_img else "[لم يتم إرفاق السجل التجاري]",
                 'vat_image': InlineImage(doc_template, vat_img, width=Inches(5.0)) if vat_img else "[لم يتم إرفاق شهادة الضريبة]",
                 'address_image': InlineImage(doc_template, addr_img, width=Inches(5.0)) if addr_img else "[لم يتم إرفاق العنوان الوطني]",
-                'map_image': InlineImage(doc_template, map_path, width=Inches(5.5)) if os.path.exists(map_path) else "[لم يتم تصوير خريطة الموقع]",
+                'map_image': map_inline_image if map_inline_image else "[لم يتم تصوير خريطة الموقع]",
                 'visit_images': visit_images_inline
             }
             
