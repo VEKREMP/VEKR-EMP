@@ -19,35 +19,41 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# تصميم عصري وخلفية متناسقة للمنصة
+# تصميم احترافي بألوان رسمية واضحة
 page_bg_img = """
 <style>
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(to bottom right, #f4f9f4, #e2f0e2);
+    /* Clean, soft modern gray to reduce eye strain */
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     background-size: cover;
 }
 [data-testid="stHeader"] {
     background: rgba(0,0,0,0);
 }
 .main-title {
-    color: #1b4332;
+    /* Deep charcoal/slate for the title */
+    color: #1e293b; 
     font-weight: 800;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 .stButton>button {
-    background-color: #2d6a4f;
+    /* Deep clear teal */
+    background-color: #0f766e; 
     color: white;
+    border: none;
     border-radius: 8px;
     font-weight: bold;
     width: 100%;
+    padding: 10px 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Very smooth animation */
 }
 .stButton>button:hover {
-    background-color: #40916c; /* A slightly brighter, more vibrant green */
+    /* Brighter teal on hover */
+    background-color: #14b8a6; 
     color: #ffffff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transform: translateY(-2px); /* Lifts the button slightly */
-    transition: all 0.3s ease; /* Makes the animation smooth */
+    box-shadow: 0 8px 16px rgba(15, 118, 110, 0.2); 
+    transform: translateY(-3px); 
 }
 </style>
 """
