@@ -19,41 +19,47 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# تصميم احترافي بألوان رسمية واضحة
+# تصميم احترافي بألوان رسمية واضحة (مع منع تأثير الوضع المظلم)
 page_bg_img = """
 <style>
+/* Force the background AND global text color to stay light-themed */
 [data-testid="stAppViewContainer"] {
-    /* Clean, soft modern gray to reduce eye strain */
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    background-size: cover;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+    background-size: cover !important;
+    color: #1e293b !important; 
 }
 [data-testid="stHeader"] {
-    background: rgba(0,0,0,0);
+    background: rgba(0,0,0,0) !important;
 }
+
+/* Force all text elements to stay dark, even if Dark Mode is toggled */
+p, span, div, h1, h2, h3, h4, h5, h6, label {
+    color: #1e293b !important;
+}
+
 .main-title {
-    /* Deep charcoal/slate for the title */
-    color: #1e293b; 
-    font-weight: 800;
-    text-align: center;
-    margin-bottom: 24px;
+    color: #1e293b !important; 
+    font-weight: 800 !important;
+    text-align: center !important;
+    margin-bottom: 24px !important;
 }
+
 .stButton>button {
-    /* Deep clear teal */
-    background-color: #0f766e; 
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    width: 100%;
-    padding: 10px 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Very smooth animation */
+    background-color: #0f766e !important; 
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    width: 100% !important;
+    padding: 10px 0 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; 
 }
+
 .stButton>button:hover {
-    /* Brighter teal on hover */
-    background-color: #14b8a6; 
-    color: #ffffff;
-    box-shadow: 0 8px 16px rgba(15, 118, 110, 0.2); 
-    transform: translateY(-3px); 
+    background-color: #14b8a6 !important; 
+    color: #ffffff !important;
+    box-shadow: 0 8px 16px rgba(15, 118, 110, 0.2) !important; 
+    transform: translateY(-3px) !important; 
 }
 </style>
 """
