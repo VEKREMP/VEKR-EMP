@@ -43,8 +43,11 @@ page_bg_img = """
     width: 100%;
 }
 .stButton>button:hover {
-    background-color: #1b4332;
+    background-color: #40916c; /* A slightly brighter, more vibrant green */
     color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px); /* Lifts the button slightly */
+    transition: all 0.3s ease; /* Makes the animation smooth */
 }
 </style>
 """
